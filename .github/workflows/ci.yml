@@ -59,6 +59,11 @@ jobs:
         run: |
           opam repo add lambdapi https://github.com/deducteam/opam-lambdapi-repository.git || true
           opam install -y lambdapi-stdlib.1.3.1
+      - name: Install lambdapi's runtime system library
+        # The lambdapi binary is dynamically linked against libev (libev.so.4).
+        # opam installs it via depext on a cache MISS, but on a cache HIT the opam
+        # install no-ops, so the system lib must be ensured explicitly every run.
+        run: sudo apt-get install -y libev-dev || { sudo apt-get update && sudo apt-get install -y libev-dev; }
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
