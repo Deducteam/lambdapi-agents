@@ -1,5 +1,7 @@
 # lambdapi-mcp
 
+[![CI](https://github.com/Deducteam/lambdapi-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/Deducteam/lambdapi-agents/actions/workflows/ci.yml)
+
 An [MCP](https://modelcontextprotocol.io/) server exposing
 [Lambdapi](https://github.com/Deducteam/lambdapi) proof-assistant
 capabilities to AI agents.

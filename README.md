@@ -1,5 +1,7 @@
 # lambdapi-agents
 
+[![CI](https://github.com/Deducteam/lambdapi-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/Deducteam/lambdapi-agents/actions/workflows/ci.yml)
+
 AI-agent tooling for the [Lambdapi](https://github.com/Deducteam/lambdapi)
 proof assistant — an MCP server, an agent skill, and a benchmarking arena,
 in one repo.
