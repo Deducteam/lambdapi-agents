@@ -36,15 +36,17 @@ jobs:
         run: python -c "import lambdapi_mcp.server; from lambdapi_mcp import tools; assert all(hasattr(tools, n) for n in ['tool_check','tool_goals','tool_query','tool_try','tool_symbols','tool_axioms','tool_proofterm','tool_debug']); print('import smoke ok')"
 
   test:
-    name: tests (lambdapi via opam)
+    name: tests (lambdapi + stdlib via opam)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: "5"
-      - name: Install lambdapi
-        run: opam install -y lambdapi.3.0.0
+      - name: Install lambdapi + Stdlib
+        # lambdapi-stdlib is the official opam package (Deducteam/lambdapi-stdlib);
+        # it installs Stdlib/*.lp under the switch's lib_root, which the suite needs.
+        run: opam install -y lambdapi.3.0.0 lambdapi-stdlib.1.3.1
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
