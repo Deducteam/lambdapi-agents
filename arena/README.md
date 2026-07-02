@@ -22,8 +22,9 @@ proof tasks and for exercising the tooling end-to-end:
 The arena compares agent performance across configurations. The axes:
 
 - **MCP** — with / without the [`mcp/`](../mcp) server.
-- **Skill** — without, with the MCP variant, or with the CLI variant of
-  [`skill/`](../skill).
+- **Skill** — without / with the [`skills/lambdapi/`](../skills/lambdapi) skill.
+  With the skill on, MCP-first vs CLI-only prompting is a further sub-axis, both
+  derived from the one canonical skill.
 - **Agent** — Claude / Codex / Gemini.
 - **Effort** — low / medium / high / xhigh / max.
 - **Theory** — single corpora and *combinations* of theories: how many distinct

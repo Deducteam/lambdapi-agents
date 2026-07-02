@@ -9,46 +9,55 @@ and measure how well it does under different tool configurations.
 
 ## Components
 
-| Dir                | What                                                                                        |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| [`mcp/`](mcp)      | MCP server exposing `lambdapi lsp` to agents — `check`, `goals`, `query`, `try`, `symbols`, `axioms` |
-| [`skill/`](skill)  | Agent skill teaching Lambdapi syntax, tactics, and the tool surface — MCP and CLI variants   |
-| [`arena/`](arena)  | Benchmarking harness + proof corpora for evaluating agents across configurations             |
+| Dir                  | What                                                                                        |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| [`mcp/`](mcp)        | Standalone MCP server exposing `lambdapi lsp` to any client — `check`, `goals`, `query`, `try`, `symbols`, `axioms` |
+| [`skills/`](skills)  | Agent skill (`skills/lambdapi/`) teaching Lambdapi syntax, tactics, and the tool surface      |
+| [`arena/`](arena)    | Benchmarking harness + proof corpora for evaluating agents across configurations             |
 
-These are the two ends of the **"MCP vs skill"** question the project is
-exploring: the MCP gives the agent a rigid, structured tool interface; the
-skill gives it prose guidance and lets it drive the `lambdapi` CLI itself.
-The arena exists to measure which wins, and where.
+The MCP and the skill are the two ends of the **"MCP vs skill"** question the
+project explores: the MCP gives the agent a rigid, structured tool interface;
+the skill gives it prose guidance and lets it drive the `lambdapi` CLI itself.
+The arena measures which wins, and where.
 
 ## Quickstart
 
-### MCP server
+### As a Claude Code plugin (skill + server together)
+
+```
+/plugin marketplace add Deducteam/lambdapi-agents
+/plugin install lambdapi-agents@deducteam
+```
+
+Installs the skill and wires up the MCP server in one step. The pieces also
+work on their own:
+
+### MCP server (any MCP client)
 
 ```bash
 cd mcp
 pip install -e ".[dev]"
 pytest                    # Stdlib-dependent tests skip if the Stdlib is absent
-lambdapi-mcp --help       # the server; wire it into your MCP client
+lambdapi-mcp --help       # the server
 ```
 
-See [`mcp/README.md`](mcp/README.md) for client config and flags.
+Point a client at `uv run --directory mcp lambdapi-mcp` from a checkout (or
+`uvx lambdapi-mcp` once published). See [`mcp/README.md`](mcp/README.md) for
+per-client config.
 
-### Skill
-
-Pick a variant and drop it into your agent's skills directory:
+### Skill (standalone)
 
 ```bash
-mkdir -p ~/.claude/skills/lambdapi
-cp skill/SKILL.mcp.md ~/.claude/skills/lambdapi/SKILL.md   # MCP-first
-# or: cp skill/SKILL.md ~/.claude/skills/lambdapi/SKILL.md # CLI-only
+cp -r skills/lambdapi ~/.claude/skills/lambdapi
 ```
 
-See [`skill/README.md`](skill/README.md) for the difference.
+It prefers the `mcp__lambdapi__*` tools when present and falls back to the
+`lambdapi` CLI. See [`skills/README.md`](skills/README.md).
 
 ### Arena
 
-Proof corpora live in [`arena/corpora/`](arena/corpora); the evaluation
-harness is under construction. See [`arena/README.md`](arena/README.md).
+Proof corpora live in [`arena/corpora/`](arena/corpora); the evaluation harness
+is under construction. See [`arena/README.md`](arena/README.md).
 
 ## Requirements
 
@@ -57,9 +66,19 @@ harness is under construction. See [`arena/README.md`](arena/README.md).
 - The Lambdapi Stdlib for proof-exercising tools (the opam install already
   provides it under `lambdapi`'s `lib_root`)
 
+## Layout
+
+```
+mcp/              standalone Python MCP server (PyPI-publishable)
+skills/lambdapi/  the agent skill (SKILL.md + references/)
+arena/            benchmarking harness + proof corpora
+.claude-plugin/   Claude Code plugin + marketplace manifests (thin glue)
+.mcp.json         dev: auto-wire the server when using Claude Code in this repo
+```
+
 ## Provenance
 
-Folded together from two prototypes — `lambdapi-mcp` (server + MCP skill) and
+Folded together from two prototypes — `lambdapi-mcp` (server + skill) and
 `lambdapi-skill` (CLI skill + mirrored upstream docs) — into a single repo.
 History restarts here; the originals keep theirs.
 

@@ -1,6 +1,5 @@
 ---
 name: lambdapi
-version: "5.0"
 description: >
   Write, debug, and check Lambdapi (.lp) proof-assistant code.
   TRIGGER when: editing .lp files, debugging lambdapi errors, writing
@@ -9,6 +8,7 @@ description: >
   DO NOT TRIGGER when: editing OCaml, Python, or other non-.lp code,
   even if it generates .lp output.
 allowed-tools: Read, Grep, Glob, Bash(lambdapi *), mcp__lambdapi__*
+license: Apache-2.0
 ---
 
 # Lambdapi

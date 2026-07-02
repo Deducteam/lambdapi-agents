@@ -7,7 +7,7 @@ license = { text = "Apache-2.0" }
 authors = [{ name = "Ciarán Dunne", email = "cciaranddunne@gmail.com" }]
 requires-python = ">=3.10"
 dependencies = [
-    "mcp>=1.0.0",
+    "mcp>=1.0.0,<2",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -20,14 +20,15 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "ruff>=0.6"]
 
 [project.scripts]
 lambdapi-mcp = "lambdapi_mcp.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/ciaran-matthew-dunne/lambdapi-mcp"
-Issues = "https://github.com/ciaran-matthew-dunne/lambdapi-mcp/issues"
+Homepage = "https://github.com/Deducteam/lambdapi-agents"
+Repository = "https://github.com/Deducteam/lambdapi-agents"
+Issues = "https://github.com/Deducteam/lambdapi-agents/issues"
 
 [build-system]
 requires = ["hatchling"]
@@ -35,3 +36,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lambdapi_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

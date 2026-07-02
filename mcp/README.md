@@ -75,23 +75,20 @@ Speaks MCP on stdio; typically you don't invoke it by hand.
 ### Lambdapi skill
 
 The agent skill that pairs with this server lives one level up in this
-monorepo, at [`../skill/`](../skill), in two variants:
+monorepo, at [`../skills/lambdapi/`](../skills/lambdapi). Its `SKILL.md`
+prefers the `mcp__lambdapi__*` tools above when they're available and falls
+back to the `lambdapi` CLI otherwise; `references/` mirrors the upstream
+manual.
 
-- `skill/SKILL.mcp.md` — MCP-first: teaches the agent to reach for the
-  `mcp__lambdapi__*` tools above.
-- `skill/SKILL.md` — CLI-only: drives the `lambdapi` binary from a shell,
-  with the mirrored upstream reference under `skill/doc/`.
-
-Install one by copying it in as `SKILL.md`:
+Install it standalone by copying the directory in:
 
 ```bash
-mkdir -p ~/.claude/skills/lambdapi
-cp ../skill/SKILL.mcp.md ~/.claude/skills/lambdapi/SKILL.md   # MCP variant
+cp -r ../skills/lambdapi ~/.claude/skills/lambdapi
 ```
 
-The skill auto-triggers when the agent edits `.lp` files or the user
-mentions Lambdapi. The MCP variant pairs with the server above — it
-instructs the agent to reach for `mcp__lambdapi__*` tools first.
+Or install the skill and this server together as a Claude Code plugin — see the
+[repo README](../README.md). The skill auto-triggers when the agent edits `.lp`
+files or the user mentions Lambdapi.
 
 ## Design
 
