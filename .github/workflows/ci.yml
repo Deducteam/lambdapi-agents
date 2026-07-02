@@ -52,8 +52,9 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Locate Stdlib
         run: |
-          LR="$OPAM_SWITCH_PREFIX/lib/lambdapi/lib_root"
+          LR="$(opam var lib)/lambdapi/lib_root"
+          echo "Resolved lib_root: $LR"
           echo "LAMBDAPI_LIB_ROOT=$LR" >> "$GITHUB_ENV"
-          test -d "$LR/Stdlib" || { echo "Stdlib missing at $LR/Stdlib"; ls -la "$OPAM_SWITCH_PREFIX/lib/lambdapi" || true; exit 1; }
+          test -d "$LR/Stdlib" || { echo "Stdlib missing at $LR/Stdlib"; ls -la "$(opam var lib)/lambdapi" || true; exit 1; }
       - name: Test
-        run: pytest -q
+        run: opam exec -- pytest -q
