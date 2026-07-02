@@ -6,6 +6,10 @@ Notable changes to `lambdapi-mcp`. Format follows
 
 ## [Unreleased]
 
+### Added
+- GitHub Actions CI: ruff + an import smoke on Python 3.10 and 3.13, plus the
+  full pytest suite against `lambdapi` installed via opam.
+
 ### Changed
 - Split `tools.py` into a `tools/` subpackage (one module per tool plus a
   shared `_common.py`); the public import surface (`tools.tool_*`) is unchanged.

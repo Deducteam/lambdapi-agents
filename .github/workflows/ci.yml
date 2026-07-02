@@ -1,0 +1,59 @@
+name: mcp
+
+on:
+  push:
+    branches: [main]
+    paths: ["mcp/**", ".github/workflows/ci.yml"]
+  pull_request:
+    paths: ["mcp/**", ".github/workflows/ci.yml"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: mcp
+
+jobs:
+  lint:
+    name: lint + import (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Ruff
+        run: ruff check src
+      - name: Import smoke
+        run: python -c "import lambdapi_mcp.server; from lambdapi_mcp import tools; assert all(hasattr(tools, n) for n in ['tool_check','tool_goals','tool_query','tool_try','tool_symbols','tool_axioms','tool_proofterm','tool_debug']); print('import smoke ok')"
+
+  test:
+    name: tests (lambdapi via opam)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5"
+      - name: Install lambdapi
+        run: opam install -y lambdapi.3.0.0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package
+        run: pip install -e ".[dev]"
+      - name: Locate Stdlib
+        run: |
+          LR="$OPAM_SWITCH_PREFIX/lib/lambdapi/lib_root"
+          echo "LAMBDAPI_LIB_ROOT=$LR" >> "$GITHUB_ENV"
+          test -d "$LR/Stdlib" || { echo "Stdlib missing at $LR/Stdlib"; ls -la "$OPAM_SWITCH_PREFIX/lib/lambdapi" || true; exit 1; }
+      - name: Test
+        run: pytest -q
