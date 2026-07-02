@@ -5,13 +5,13 @@ MCP server exposing Lambdapi proof-assistant capabilities to AI agents. Layers o
 ## Architecture
 
 - `lsp.py` — JSON-RPC client for `lambdapi lsp`. Handles framing, request/reply routing, diagnostics. Auto-restarts the subprocess on `BrokenPipeError` / death; `restart_count` is observable.
-- `tools.py` — pure functions taking an `LSPClient`, returning JSON-serialisable dicts. Every tool validates its inputs (`_check_file`, `_check_line`) and returns `{ok: false, error: ...}` on bad input rather than leaking Python exceptions.
-- `server.py` — `FastMCP` glue; registers one MCP tool per function in `tools.py` and holds a single long-lived `LSPClient` per session.
+- `tools/` — one module per tool (`check`, `goals`, `query`, `try_`, `symbols`, `axioms`, `proofterm`, `debug`) plus `_common.py` for shared helpers (file/line validation, text editing, diagnostic + goal-state formatting, comment stripping). Each tool is a pure function taking an `LSPClient` and returning a JSON-serialisable dict; it validates its inputs (`_check_file`, `_check_line`) and returns `{ok: false, error: ...}` on bad input rather than leaking Python exceptions. `tools/__init__.py` re-exports the flat surface (`tools.tool_check`, …).
+- `server.py` — `FastMCP` glue; registers one MCP tool per `tool_*` function and holds a single long-lived `LSPClient` per session.
 - `__main__.py` — CLI (`lambdapi-mcp`) with `--lib-root`, `--stdlib`, `--binary`, `--log-file`.
 
-## Tools (6)
+## Tools (8)
 
-`lambdapi_check`, `lambdapi_goals`, `lambdapi_query`, `lambdapi_symbols`, `lambdapi_try`, `lambdapi_axioms`.
+`lambdapi_check`, `lambdapi_goals`, `lambdapi_query`, `lambdapi_symbols`, `lambdapi_try`, `lambdapi_axioms`, `lambdapi_proofterm`, `lambdapi_debug`.
 
 Hover / go-to-definition / completions are subsumed by `lambdapi_query` (`print X` shows a symbol's declaration + body). Multi-tactic probing is built into `lambdapi_try` (takes a list).
 
