@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.coverage
+
+# Lambdapi build artifacts
+*.lpo
+
+# Editors / OS
+.zed/
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Local agent settings
+.claude/settings.local.json
+
+# Local planning notes — not published.
+# Delete this line to publish docs/meeting.md.
+/docs/meeting.md
