@@ -3,19 +3,20 @@
 [![CI](https://github.com/Deducteam/lambdapi-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/Deducteam/lambdapi-agents/actions/workflows/ci.yml)
 
 AI-agent tooling for the [Lambdapi](https://github.com/Deducteam/lambdapi)
-proof assistant — an MCP server, an agent skill, and a benchmarking arena,
-in one repo.
+proof assistant — an MCP server, an agent skill, an edit-time check hook, and a
+benchmarking arena, in one repo.
 
 The goal: let an LLM agent write, check, and repair Lambdapi (`.lp`) proofs,
 and measure how well it does under different tool configurations.
 
 ## Components
 
-| Dir                  | What                                                                                        |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| [`mcp/`](mcp)        | Standalone MCP server exposing `lambdapi lsp` to any client — `check`, `goals`, `query`, `try`, `symbols`, `axioms` |
-| [`skills/`](skills)  | Agent skill (`skills/lambdapi/`) teaching Lambdapi syntax, tactics, and the tool surface      |
-| [`arena/`](arena)    | Benchmarking harness + proof corpora for evaluating agents across configurations             |
+| Dir                 | What                                                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| [`mcp/`](mcp)       | Standalone MCP server exposing `lambdapi lsp` to any client — `check`, `goals`, `query`, `try`, `symbols`, `axioms` |
+| [`skills/`](skills) | Agent skill (`skills/lambdapi/`) teaching Lambdapi syntax, tactics, and the tool surface                            |
+| [`hooks/`](hooks)   | PostToolUse hook that type-checks `.lp` files on edit and feeds diagnostics + proof state back to the agent         |
+| [`arena/`](arena)   | Benchmarking harness + proof corpora for evaluating agents across configurations                                   |
 
 The MCP and the skill are the two ends of the **"MCP vs skill"** question the
 project explores: the MCP gives the agent a rigid, structured tool interface;
@@ -24,15 +25,15 @@ The arena measures which wins, and where.
 
 ## Quickstart
 
-### As a Claude Code plugin (skill + server together)
+### As a Claude Code plugin (skill + server + hook)
 
 ```
 /plugin marketplace add Deducteam/lambdapi-agents
 /plugin install lambdapi-agents@deducteam
 ```
 
-Installs the skill and wires up the MCP server in one step. The pieces also
-work on their own:
+Installs the skill, wires up the MCP server, and enables the edit-time
+type-check hook — in one step. The pieces also work on their own:
 
 ### MCP server (any MCP client)
 
@@ -56,6 +57,12 @@ cp -r skills/lambdapi ~/.claude/skills/lambdapi
 It prefers the `mcp__lambdapi__*` tools when present and falls back to the
 `lambdapi` CLI. See [`skills/README.md`](skills/README.md).
 
+### Edit-time check hook (standalone)
+
+Register `hooks/lp_check.py` as a `PostToolUse` hook in your project's
+`.claude/settings.json` to type-check every `.lp` edit and feed the diagnostics
+and proof state back to the agent. See [`hooks/README.md`](hooks/README.md).
+
 ### Arena
 
 Proof corpora live in [`arena/corpora/`](arena/corpora); the evaluation harness
@@ -73,6 +80,7 @@ is under construction. See [`arena/README.md`](arena/README.md).
 ```
 mcp/              standalone Python MCP server (PyPI-publishable)
 skills/lambdapi/  the agent skill (SKILL.md + references/)
+hooks/            edit-time .lp type-check hook (bundled in the plugin)
 arena/            benchmarking harness + proof corpora
 .claude-plugin/   Claude Code plugin + marketplace manifests (thin glue)
 .mcp.json         dev: auto-wire the server when using Claude Code in this repo

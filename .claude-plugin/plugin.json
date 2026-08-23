@@ -1,7 +1,7 @@
 {
   "name": "lambdapi-agents",
   "version": "0.1.0",
-  "description": "Lambdapi proof-assistant tooling for AI agents: the lambdapi MCP server plus the Lambdapi skill.",
+  "description": "Lambdapi proof-assistant tooling for AI agents: the lambdapi MCP server, the Lambdapi skill, and an edit-time type-check hook.",
   "author": { "name": "Deducteam" },
   "homepage": "https://github.com/Deducteam/lambdapi-agents",
   "repository": "https://github.com/Deducteam/lambdapi-agents",

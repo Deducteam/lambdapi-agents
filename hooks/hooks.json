@@ -1,0 +1,18 @@
+{
+  "description": "Type-check Lambdapi (.lp) files on edit and feed diagnostics + proof state back to the agent.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/lp_check.py\"",
+            "timeout": 130,
+            "statusMessage": "Type-checking Lambdapi…"
+          }
+        ]
+      }
+    ]
+  }
+}
