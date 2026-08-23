@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from ..lsp import LSPClient, file_uri
-from ._common import _require_position, _errors, _format_err
+from ._common import _errors, _format_err, _require_position
 
 
 def _check_single(

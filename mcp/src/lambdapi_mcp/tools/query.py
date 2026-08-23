@@ -5,14 +5,13 @@ import re
 
 from ..lsp import LSPClient, file_uri
 from ._common import (
-    _require_position,
-    _insert_at,
     _ensure_semicolon,
     _errors,
+    _insert_at,
+    _require_position,
     _split_lines,
     _strip_comments,
 )
-
 
 _QUERY_VERBS = {"compute", "type", "print", "search"}
 

@@ -34,7 +34,7 @@ jobs:
       - name: Ruff
         run: ruff check src
       - name: Import smoke
-        run: python -c "import lambdapi_mcp.server; from lambdapi_mcp import tools; assert all(hasattr(tools, n) for n in ['tool_check','tool_goals','tool_query','tool_try','tool_symbols','tool_axioms','tool_proofterm','tool_debug']); print('import smoke ok')"
+        run: python -c "import lambdapi_mcp.server; from lambdapi_mcp import tools; assert all(hasattr(tools, n) for n in ['tool_check','tool_goals','tool_query','tool_try','tool_signature']); print('import smoke ok')"
 
   test:
     name: tests (lambdapi + stdlib via opam)

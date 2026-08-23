@@ -34,7 +34,7 @@ class _DocSession:
     """State for one ``open_doc`` context: the drained notifications
     from the did_open cycle, plus a convenience view on diagnostics."""
 
-    def __init__(self, client: "LSPClient", uri: str) -> None:
+    def __init__(self, client: LSPClient, uri: str) -> None:
         self._client = client
         self._uri = uri
         self.notifications: list[dict] = []
@@ -117,10 +117,8 @@ class LSPClient:
         with self._restart_lock:
             if self._is_alive():
                 return  # another thread already restarted
-            try:
+            with contextlib.suppress(Exception):
                 self.stop()
-            except Exception:
-                pass
             self.start()
             self.restart_count += 1
 
@@ -129,10 +127,8 @@ class LSPClient:
         if not self._proc:
             return
         if self._proc.poll() is None:
-            try:
+            with contextlib.suppress(Exception):
                 self._proc.stdin.close()
-            except Exception:
-                pass
             try:
                 self._proc.terminate()
                 self._proc.wait(timeout=2)
@@ -140,12 +136,10 @@ class LSPClient:
                 self._proc.kill()
                 self._proc.wait(timeout=1)
         for pipe in (self._proc.stdout, self._proc.stderr, self._proc.stdin):
-            try:
+            with contextlib.suppress(Exception):
                 pipe and pipe.close()
-            except Exception:
-                pass
 
-    def __enter__(self) -> "LSPClient":
+    def __enter__(self) -> LSPClient:  # noqa: PYI034  (typing.Self needs 3.11; we target 3.10)
         self.start()
         return self
 

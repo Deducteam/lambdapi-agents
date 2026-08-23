@@ -9,19 +9,23 @@ from __future__ import annotations
 
 from .check import tool_check
 from .goals import tool_goals
-from .query import tool_query
-from .try_ import tool_try
-from .signature import tool_signature
+from .query import (
+    _safe_query_line,  # noqa: F401
+    tool_query,
+)
 
 # Private helpers re-exported at the package level for the test suite, which
 # exercises them directly (kept working across the tools.py -> tools/ split).
-from .signature import _discover_pkg_roots  # noqa: F401
-from .query import _safe_query_line  # noqa: F401
+from .signature import (
+    _discover_pkg_roots,  # noqa: F401
+    tool_signature,
+)
+from .try_ import tool_try
 
 __all__ = [
     "tool_check",
     "tool_goals",
     "tool_query",
-    "tool_try",
     "tool_signature",
+    "tool_try",
 ]

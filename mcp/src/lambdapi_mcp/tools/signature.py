@@ -24,14 +24,13 @@ import re
 
 from ..lsp import LSPClient
 from ._common import (
-    _read,
+    _BLOCK_COMMENT_RE,
+    _LINE_COMMENT_RE,
     _check_file,
+    _read,
     _split_lines,
     _strip_comments,
-    _LINE_COMMENT_RE,
-    _BLOCK_COMMENT_RE,
 )
-
 
 # --- Package / import resolution (shared with the require-walk) -----------
 
@@ -159,8 +158,7 @@ def _parse_requires(text: str) -> list[str]:
     stripped = _BLOCK_COMMENT_RE.sub("", stripped)
     modules: list[str] = []
     for m in _REQUIRE_RE.finditer(stripped):
-        for tok in _MODULE_TOKEN_RE.findall(m.group(1)):
-            modules.append(tok)
+        modules.extend(_MODULE_TOKEN_RE.findall(m.group(1)))
     return modules
 
 

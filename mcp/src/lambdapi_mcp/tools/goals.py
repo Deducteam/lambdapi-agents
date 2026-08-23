@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from ..lsp import LSPClient, file_uri
-from ._common import _require_position, _format_goals_compact
+from ._common import _format_goals_compact, _require_position
 
 
 def tool_goals(client: LSPClient, file: str, line: int) -> dict:

@@ -3,13 +3,13 @@ from __future__ import annotations
 
 from ..lsp import LSPClient, file_uri
 from ._common import (
-    _require_position,
     _ensure_semicolon,
+    _errors,
+    _format_goals_compact,
+    _goal_target,
     _insert_at,
     _replace_line,
-    _errors,
-    _goal_target,
-    _format_goals_compact,
+    _require_position,
     _split_lines,
 )
 
