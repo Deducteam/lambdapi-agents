@@ -79,9 +79,8 @@ Speaks MCP on stdio; typically you don't invoke it by hand.
 
 The agent skill that pairs with this server lives one level up in this
 monorepo, at [`../skills/lambdapi/`](../skills/lambdapi). Its `SKILL.md`
-prefers the `mcp__lambdapi__*` tools above when they're available and falls
-back to the `lambdapi` CLI otherwise; `references/` mirrors the upstream
-manual.
+drives the `lambdapi` CLI directly rather than the tools above;
+`references/` mirrors the upstream manual.
 
 Install it standalone by copying the directory in:
 

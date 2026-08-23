@@ -54,8 +54,8 @@ per-client config.
 cp -r skills/lambdapi ~/.claude/skills/lambdapi
 ```
 
-It prefers the `mcp__lambdapi__*` tools when present and falls back to the
-`lambdapi` CLI. See [`skills/README.md`](skills/README.md).
+It drives the `lambdapi` CLI directly. See
+[`skills/README.md`](skills/README.md).
 
 ### Edit-time check hook (standalone)
 

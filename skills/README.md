@@ -6,10 +6,11 @@ Agent skills for the Lambdapi proof assistant, in the standard layout
 ## `lambdapi/`
 
 Teaches an LLM to write, check, and debug Lambdapi (`.lp`) code. The canonical
-`SKILL.md` prefers the `mcp__lambdapi__*` tools from the [`mcp/`](../mcp) server
-when they're available and falls back to the `lambdapi` CLI otherwise.
-`references/` mirrors the upstream Lambdapi manual (syntax, commands, tactics,
-queries, grammar) for progressive disclosure.
+`SKILL.md` drives the `lambdapi` CLI directly — it carries the `check --help`
+reference, the BNF grammar, and an index of the Stdlib modules, and does not
+reference the [`mcp/`](../mcp) server's tools. `references/` mirrors the upstream
+Lambdapi manual (syntax, commands, tactics, queries, grammar) for progressive
+disclosure.
 
 The **skill-on/off** and **MCP-vs-CLI** distinctions are benchmark axes owned by
 [`arena/`](../arena), not separate skills here — the arena derives those

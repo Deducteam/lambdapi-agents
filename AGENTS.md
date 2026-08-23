@@ -10,9 +10,9 @@ the component that matches your task and read its own guide first.
 - `mcp/` — standalone Python MCP server over `lambdapi lsp`. Own
   `pyproject.toml` and pytest suite; PyPI-publishable and usable by any MCP
   client. Component guide: [`mcp/AGENTS.md`](mcp/AGENTS.md).
-- `skills/lambdapi/` — the agent skill: canonical `SKILL.md` (prefers the
-  `mcp__lambdapi__*` tools when available, else the `lambdapi` CLI) plus
-  `references/` mirroring the upstream manual for progressive disclosure.
+- `skills/lambdapi/` — the agent skill: canonical `SKILL.md` (CLI-driven; it
+  does not reference the MCP tools) plus `references/` mirroring the upstream
+  manual for progressive disclosure.
 - `hooks/` — a `PostToolUse` hook (`lp_check.py`) that type-checks a `.lp` file
   on every `Write`/`Edit` and returns the diagnostics plus the proof state at the
   failure point to the agent. Read-only: it writes no `.lpo`. Guide:
