@@ -131,71 +131,26 @@ def build_server(
 
     @mcp.tool(
         description=(
-            "List the top-level symbols declared in a file (via LSP "
-            "documentSymbol, filtered to only locally-declared names)."
+            "Describe the theory that [files] present: every declared "
+            "symbol, classified as definitional or axiomatic, plus "
+            "rewrite rules and admits. `scope` controls recursion: "
+            "'file' = just the inputs, 'project' (default) = follow "
+            "`require` but skip files under lib_root (Stdlib), 'all' = "
+            "full transitive scan including Stdlib. Returns `symbols` "
+            "(each with name, line, file, type, kind ∈ "
+            "{symbol,inductive,constructor}, status ∈ "
+            "{definitional,axiomatic}, and via ∈ "
+            "{body,rules,inductive,constructor,axiom,postulate}), plus "
+            "`rewrite_rules`, `admits`, `scanned_files`, and deduplicated "
+            "`unresolved_imports`. Axioms are the `via=='axiom'` symbols; "
+            "the full axiomatic base is every `status=='axiomatic'` symbol "
+            "plus `admits`."
         )
     )
-    def lambdapi_symbols(file: str) -> dict:
-        return T.tool_symbols(lsp, file)
-
-    @mcp.tool(
-        description=(
-            "Scan [files] for unproved assumptions, rewrite rules, and "
-            "admits. `scope` controls recursion: 'file' = just the "
-            "inputs, 'project' (default) = follow `require` but skip "
-            "files under lib_root (Stdlib), 'all' = full transitive "
-            "scan including Stdlib. Returns assumptions, "
-            "defined_by_rules, rewrite_rules, admits, scanned_files, "
-            "and deduplicated unresolved_imports."
-        )
-    )
-    def lambdapi_axioms(
+    def lambdapi_signature(
         files: list[str], scope: str = "project"
     ) -> dict:
-        return T.tool_axioms(lsp, files, scope=scope)
-
-    @mcp.tool(
-        description=(
-            "Show the partial proof term at 1-based [line] inside a "
-            "begin…end block. Inserts `proofterm;` as a one-shot probe "
-            "without touching the file on disk. Returns "
-            "`{ok, file, line, term, raw_lines?}` where `term` is the "
-            "printed partial term — useful for HOU debugging where you "
-            "need to see where the metavariables live in the term."
-        )
-    )
-    def lambdapi_proofterm(file: str, line: int) -> dict:
-        return T.tool_proofterm(lsp, file, line)
-
-    @mcp.tool(
-        description=(
-            "Run `lambdapi check --debug=FLAGS` and return filtered "
-            "trace output. Use this when LSP diagnostics aren't enough — "
-            "typically for HOU / metavariable / unification debugging "
-            "(`flags='u'` for unification, `'a'` for metavariables, "
-            "`'t'` for tactics, or combinations like `'iut'`). Trace "
-            "output can be very large (multi-MB on big proofs); manage "
-            "via `pattern` (regex line filter), `head` / `tail` (line "
-            "caps), and `save_to` (write full log to a file so you can "
-            "re-grep without re-running). Returns `{ok, exit_code, "
-            "total_lines, matched_lines, returned_lines, debug_log, "
-            "log_file?}`."
-        )
-    )
-    def lambdapi_debug(
-        file: str,
-        flags: str,
-        pattern: str | None = None,
-        tail: int | None = None,
-        head: int | None = None,
-        save_to: str | None = None,
-        timeout: float = 60.0,
-    ) -> dict:
-        return T.tool_debug(
-            lsp, file, flags,
-            pattern=pattern, tail=tail, head=head,
-            save_to=save_to, timeout=timeout,
-        )
+        return T.tool_signature(lsp, files, scope=scope)
 
     # Attach the LSP handle for tests / introspection.
     mcp._lsp_client = lsp  # type: ignore[attr-defined]

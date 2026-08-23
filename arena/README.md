@@ -31,7 +31,7 @@ The arena compares agent performance across configurations. The axes:
   ones can an agent handle, and which combinations break it?
 
 Per task, a run should record: whether the proof type-checks, any leftover
-`admit`s or axioms (via `lambdapi_axioms`), token/effort cost, and wall-clock.
+`admit`s or axioms (via `lambdapi_signature`), token/effort cost, and wall-clock.
 
 ## Adding a corpus
 

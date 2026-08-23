@@ -25,10 +25,9 @@ When the `mcp__lambdapi__*` tools are available, prefer them over `lambdapi chec
 - `lambdapi_goals file line` — proof state at a 1-based line as a flush-left `pretty` string: one hypothesis per line, then `⊢ target`. Multiple goals are labelled `[i]` and indented. `no goals` when the state is empty.
 - `lambdapi_try file line tactics [mode='insert']` — probe one or more tactics without touching disk. `tactics` is a **list of strings**; `mode='insert'` inserts each tactic before `line`, `mode='replace'` overwrites `line`. Returns `pre` (shared by all attempts) and `attempts: [{tactic, ok, closed, progress, post?}]`. `ok` = no error diagnostic on the probe line; `closed` = `pre` had ≥1 goal and `post` has 0; `progress` = goal state changed. `ok` alone ≠ useful — always check `closed` / `progress`.
 - `lambdapi_query file line query` — run a lambdapi query at `line`. `line` is a lower bound: the query snaps forward to the next top-level statement boundary, so any line inside a `begin…end` block (or past EOF) works and the reply reports `effective_line` when the snap moved the insertion point. `query` is the verb plus payload as one string: `"type X"`, `"print X"` (shows declaration + body — subsumes hover / go-to-def), `"compute t"`, `"search \"...\""`.
-- `lambdapi_symbols file` — symbols declared in a file: top-level `symbol`/`inductive`, each inductive's constructors, and its auto-generated `ind_<Type>` induction principle. Filtered against a local parse to drop transitively-imported noise.
-- `lambdapi_axioms files [scope='project']` — audit unproved assumptions. `scope='file'` = just the inputs; `'project'` = follow `require` but skip files under lib-root (Stdlib); `'all'` = full transitive scan including Stdlib. Returns `assumptions` (bodyless symbols, flagged `propositional` iff type is `π …`), `defined_by_rules` (bodyless symbols later given rewrite rules — fine), `rewrite_rules`, `admits`, plus `scanned_files` and `unresolved_imports`.
+- `lambdapi_signature files [scope='project']` — describe the theory `files` present (this is both "what's declared" and "what's assumed" — axioms are just the axiomatic part of the signature). `scope='file'` = just the inputs; `'project'` = follow `require` but skip files under lib-root (Stdlib); `'all'` = full transitive scan including Stdlib. Returns a flat `symbols` list, each `{file, line, name, type, kind, status, via}` where `kind` ∈ {`symbol`,`inductive`,`constructor`}, `status` ∈ {`definitional`,`axiomatic`}, and `via` says why: `body` (has `≔`), `rules` (bodyless data symbol reduced by rewrite rules), `inductive`/`constructor`, `axiom` (bodyless `π …` postulate), `postulate` (bodyless non-propositional). Also `rewrite_rules`, `admits`, `scanned_files`, `unresolved_imports`. **To audit axioms: filter `status=='axiomatic'` (plus any `admits`); genuine logical axioms are `via=='axiom'`.**
 
-**Workflow:** edit → `lambdapi_check` → on error, `lambdapi_goals` at the failing line → `lambdapi_try` (pass a list so you can race a few candidates) to converge on a fix → write the fix in. Then re-`check` and `axioms` before declaring done.
+**Workflow:** edit → `lambdapi_check` → on error, `lambdapi_goals` at the failing line → `lambdapi_try` (pass a list so you can race a few candidates) to converge on a fix → write the fix in. Then re-`check` and `lambdapi_signature` (check for unexpected `axiomatic` symbols / `admits`) before declaring done.
 
 ## Surface syntax
 
@@ -86,7 +85,7 @@ Modifiers compose: `private opaque symbol …`, `sequential injective symbol …
 - `require open A.B` makes A.B's symbols accessible unqualified. Without `open`, qualify every use.
 - `require A.B as C` introduces alias `C.symbol`.
 - `private open` does **not** propagate to files that `require` you.
-- The MCP's `lambdapi_axioms` walks `require` transitively and resolves modules via every `lambdapi.pkg` it finds upward from the input file plus the lib root.
+- The MCP's `lambdapi_signature` walks `require` transitively and resolves modules via every `lambdapi.pkg` it finds upward from the input file plus the lib root.
 
 ## Term language
 

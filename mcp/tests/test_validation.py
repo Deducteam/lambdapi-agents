@@ -9,7 +9,6 @@ from lambdapi_mcp import tools
 
 MISSING_FILE_CALLS = {
     "check":    lambda lsp, p: tools.tool_check(lsp, p),
-    "symbols":  lambda lsp, p: tools.tool_symbols(lsp, p),
     "goals":    lambda lsp, p: tools.tool_goals(lsp, p, line=1),
     "query":    lambda lsp, p: tools.tool_query(lsp, p, line=1, query="type x"),
     "try":      lambda lsp, p: tools.tool_try(
@@ -63,24 +62,24 @@ def test_try_empty_list(lsp, fixture_path):
     assert "non-empty" in r["error"]
 
 
-def test_axioms_rejects_non_list(lsp, fixture_path):
-    r = tools.tool_axioms(lsp, fixture_path("simple.lp"))  # string, not list
+def test_signature_rejects_non_list(lsp, fixture_path):
+    r = tools.tool_signature(lsp, fixture_path("simple.lp"))  # string, not list
     assert r["ok"] is False
     assert "list" in r["error"]
 
 
-def test_axioms_rejects_bad_scope(lsp, fixture_path):
-    r = tools.tool_axioms(lsp, [fixture_path("simple.lp")], scope="foo")
+def test_signature_rejects_bad_scope(lsp, fixture_path):
+    r = tools.tool_signature(lsp, [fixture_path("simple.lp")], scope="foo")
     assert r["ok"] is False
     assert "scope" in r["error"]
 
 
-def test_axioms_collects_read_errors(lsp, fixture_path, tmp_path):
-    r = tools.tool_axioms(
+def test_signature_collects_read_errors(lsp, fixture_path, tmp_path):
+    r = tools.tool_signature(
         lsp,
         [fixture_path("simple.lp"), str(tmp_path / "missing.lp")],
     )
-    names = {a["name"] for a in r["assumptions"]}
+    names = {s["name"] for s in r["symbols"]}
     assert "Nat" in names  # good file still scanned
     assert "read_errors" in r
     assert any("missing.lp" in e.get("file", "") for e in r["read_errors"])

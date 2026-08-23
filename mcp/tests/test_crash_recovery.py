@@ -39,6 +39,6 @@ def test_recovers_after_lsp_crash(lsp, fixture_path):
     )
 
     # And a second call still works (state is clean).
-    r = tools.tool_symbols(lsp, fixture_path("simple.lp"))
+    r = tools.tool_signature(lsp, [fixture_path("simple.lp")], scope="file")
     names = {s["name"] for s in r["symbols"]}
     assert "double" in names

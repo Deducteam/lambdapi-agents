@@ -18,11 +18,12 @@ that ships `lambdapi lsp` works as a backend.
 | `lambdapi_goals`        | Proof state (hyps + goals) at a 1-based line                   |
 | `lambdapi_query`        | Run `compute` / `type` / `print` / `search` at a line          |
 | `lambdapi_try`          | Probe one or more tactics at a line without modifying the file |
-| `lambdapi_symbols`      | List symbols declared in a file                                |
-| `lambdapi_axioms`       | Scan files for axioms, rewrite rules, and admits               |
+| `lambdapi_signature`    | Describe a scope's theory: symbols classified definitional/axiomatic, plus rewrite rules and admits |
 
 Hover, go-to-definition, and completions are subsumed by `lambdapi_query`
-(`print X` returns a symbol's declaration and body).
+(`print X` returns a symbol's declaration and body). Listing a file's
+symbols and auditing its axioms are one query — `lambdapi_signature` —
+because axioms are just the bodyless, propositional part of the signature.
 
 All positions exposed to tools use **1-based lines and 0-based columns**,
 matching how users think about source files.
@@ -88,9 +89,9 @@ Install it standalone by copying the directory in:
 cp -r ../skills/lambdapi ~/.claude/skills/lambdapi
 ```
 
-Or install the skill and this server together as a Claude Code plugin — see the
-[repo README](../README.md). The skill auto-triggers when the agent edits `.lp`
-files or the user mentions Lambdapi.
+Or install this server together with the skill and the edit-time check hook as a
+Claude Code plugin — see the [repo README](../README.md). The skill auto-triggers
+when the agent edits `.lp` files or the user mentions Lambdapi.
 
 ## Design
 

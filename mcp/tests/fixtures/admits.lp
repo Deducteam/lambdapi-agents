@@ -1,6 +1,6 @@
-// Fixture for admit-form detection. `tool_axioms` is a static scanner,
-// so this file does not need to type-check — only the textual shapes
-// matter.
+// Fixture for admit-form detection. `tool_signature` is a static
+// scanner, so this file does not need to type-check — only the textual
+// shapes matter.
 // Line 4: admit with trailing `;`.
 opaque symbol a1 : TYPE ≔
 begin admit; end;

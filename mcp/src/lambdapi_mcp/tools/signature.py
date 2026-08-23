@@ -1,4 +1,22 @@
-"""``lambdapi_axioms`` — scan for assumptions, rewrite rules, admits."""
+"""``lambdapi_signature`` — the theory a scope presents.
+
+Describes the theory declared by one or more ``.lp`` files: every
+top-level symbol, definition, inductive, and rewrite rule, each symbol
+classified as **definitional** (has a ``≔`` body, is defined by rewrite
+rules, or is an inductive type / constructor) or **axiomatic** (a
+bodyless postulate — an ``axiom`` when its type is propositional, a
+``postulate`` otherwise). ``admit`` proof-holes are axiomatic gaps and
+are reported alongside.
+
+This folds together the former ``symbols`` (what is declared) and
+``axioms`` (what is assumed) tools: axioms are just the axiomatic
+portion of the signature. The scan is text-based (statement-level) and
+follows ``require`` transitively per the ``scope`` argument, resolving
+modules against every ``lambdapi.pkg`` it can find.
+
+Generated induction principles (``ind_<Type>``) are *not* listed: they
+aren't written in the source and every inductive has one.
+"""
 from __future__ import annotations
 
 import os
@@ -15,32 +33,12 @@ from ._common import (
 )
 
 
-# Parser-like regexes for shape classification. Run line-by-line; good
-# enough for the common cases (axioms + postulates + admits).
-# Binders look like `[x y : τ a]` or `(x : τ a)`; zero or more may sit
-# between the symbol name and its `:` type annotation.
-_BINDERS = r"(?:\s*\[[^\]]*\]|\s*\([^)]*\))*"
+# --- Package / import resolution (shared with the require-walk) -----------
 
-# Any ``symbol`` / ``constant symbol`` declaration, captured on one line.
-# Groups: 1=constant?, 2=name, 3=type (up to `;` / EOL, excluding any body).
-_SYMBOL_DECL_RE = re.compile(
-    r"^\s*(?:private\s+|protected\s+|sequential\s+|injective\s+|opaque\s+)*"
-    r"(constant\s+)?symbol\s+([^\s:\[\(]+)" + _BINDERS +
-    r"\s*:\s*(.+?)\s*;?\s*$",
+_REQUIRE_RE = re.compile(r"\brequire\b(?:\s+open\b)?\s+(.+?);", re.DOTALL)
+_MODULE_TOKEN_RE = re.compile(
+    r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*"
 )
-# `admit` is a tactic inside `begin…end`. The trailing `;` is optional
-# (the outer `end;` terminates the statement), and `admit` can appear
-# inline inside a `{ … }` subgoal block. Match the bare word anywhere on
-# a line; the ``\b`` boundary keeps us from matching the unrelated
-# `admitted` end-of-proof keyword.
-_ADMIT_RE = re.compile(r"\badmit\b")
-
-
-_REQUIRE_RE = re.compile(
-    r"\brequire\b(?:\s+open\b)?\s+(.+?);",
-    re.DOTALL,
-)
-_MODULE_TOKEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
 
 
 def _read_pkg(path: str) -> dict[str, str]:
@@ -166,12 +164,25 @@ def _parse_requires(text: str) -> list[str]:
     return modules
 
 
+# --- Statement splitting + low-level token scanning -----------------------
+
+_MODIFIERS = (
+    "private", "protected", "sequential", "injective", "constant", "opaque",
+)
+_MODIFIER_PREFIX_RE = re.compile(
+    r"^\s*((?:(?:" + "|".join(_MODIFIERS) + r")\s+)*)"
+)
 
 
 def _split_statements(text: str) -> list[tuple[int, str]]:
     """Split [text] (with comments already stripped) into statements
     terminated by a top-level ``;``. Returns (start_line_1based, body)
-    pairs with the original line of each statement's first character."""
+    pairs with the original line of each statement's first character.
+
+    ``;`` inside ``begin…end`` proof bodies still terminates here — but
+    that only truncates the proof term, which we never inspect: every
+    declaration's name, type, and ``≔`` all sit before the first
+    in-proof ``;``, so the truncated head classifies correctly."""
     stmts: list[tuple[int, str]] = []
     buf: list[str] = []
     depth = 0
@@ -198,8 +209,64 @@ def _split_statements(text: str) -> list[tuple[int, str]]:
     return stmts
 
 
+def _find_top_level(s: str, ch: str) -> int:
+    """Index of the first [ch] at bracket-depth 0 in [s], or -1."""
+    depth = 0
+    for i, c in enumerate(s):
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif c == ch and depth == 0:
+            return i
+    return -1
+
+
+def _find_top_level_str(s: str, sub: str) -> int:
+    """Index of the first [sub] at bracket-depth 0 in [s], or -1."""
+    depth = 0
+    i = 0
+    while i < len(s):
+        c = s[i]
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif depth == 0 and s.startswith(sub, i):
+            return i
+        i += 1
+    return -1
+
+
+def _split_body(decl: str) -> tuple[str, bool]:
+    """Split a symbol declaration [decl] into (head, has_body).
+
+    The body separator is ``≔`` (or its ASCII spelling ``:=``); [head]
+    is everything before it (``symbol NAME binders : TYPE``)."""
+    i = _find_top_level(decl, "≔")
+    if i >= 0:
+        return decl[:i], True
+    i = _find_top_level_str(decl, ":=")
+    if i >= 0:
+        return decl[:i], True
+    return decl, False
+
+
+# --- Declaration classification -------------------------------------------
+
 _RULE_STMT_RE = re.compile(r"^\s*rule\b(.+)$", re.DOTALL)
 _RULE_HEAD_RE = re.compile(r"^\s*([^\s\(\[]+)")
+_ADMIT_RE = re.compile(r"\badmit\b")
+_SYM_NAME_RE = re.compile(r"symbol\s+([^\s:\[\(]+)\s*(.*)", re.DOTALL)
+
+# Inductive type header: `inductive NAME : TYPE ≔ …` (and each mutual
+# member introduced by `with NAME : TYPE ≔ …`).
+_IND_HEAD_RE = re.compile(
+    r"^\s*(?:(?:" + "|".join(_MODIFIERS) + r")\s+)*"
+    r"(?:inductive|with)\s+([^\s:\[\(]+)\s*:\s*([^≔]*)"
+)
+# A constructor line inside an inductive block: `| NAME : TYPE`.
+_IND_CTOR_LINE_RE = re.compile(r"^\s*\|\s*([^\s:\[\(]+)\s*:\s*(.+?)\s*;?\s*$")
 
 
 def _is_propositional(type_str: str) -> bool:
@@ -233,21 +300,96 @@ def _parse_rewrite_rules(body: str) -> list[tuple[str, str, str]]:
     return out
 
 
-def _scan_assumptions(
-    f: str,
-) -> tuple[list[dict], list[dict], list[dict]]:
-    """Classify declarations in a single file.
+def _symbol_entry(f: str, line: int, name: str, typ: str, has_body: bool) -> dict:
+    """Classify a plain ``symbol`` declaration. Rule-defined symbols are
+    reclassified later once all rule heads are known."""
+    if has_body:
+        status, via = "definitional", "body"
+    elif _is_propositional(typ):
+        status, via = "axiomatic", "axiom"
+    else:
+        status, via = "axiomatic", "postulate"
+    return {
+        "file": f, "line": line, "name": name, "type": typ,
+        "kind": "symbol", "status": status, "via": via,
+    }
 
-    Returns ``(assumptions, rewrite_rules, admits)``."""
-    assumptions: list[dict] = []
+
+def _ctors_in_segment(segment: str, f: str, line: int) -> list[dict]:
+    """Parse inline constructors from the text after a same-line ``≔``
+    (single-line inductive style): ``| a : T | b : U``."""
+    out: list[dict] = []
+    depth = 0
+    parts: list[str] = []
+    buf: list[str] = []
+    for c in segment:
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        if c == "|" and depth == 0:
+            parts.append("".join(buf))
+            buf = []
+        else:
+            buf.append(c)
+    parts.append("".join(buf))
+    for p in parts:
+        m = re.match(r"\s*([^\s:\[\(]+)\s*:\s*(.+?)\s*;?\s*$", p)
+        if m:
+            out.append({
+                "file": f, "line": line, "name": m.group(1),
+                "type": m.group(2).strip(), "kind": "constructor",
+                "status": "definitional", "via": "constructor",
+            })
+    return out
+
+
+def _parse_inductive(body: str, start_line: int, f: str) -> list[dict]:
+    """Parse an ``inductive`` statement (possibly a mutual ``with`` block)
+    into its type formers and constructors — all definitional.
+
+    Line-based so each type / constructor keeps its own source line;
+    constructors written on the ``≔`` line are recovered too."""
+    out: list[dict] = []
+    saw_type = False
+    for off, ln in enumerate(body.split("\n")):
+        lineno = start_line + off
+        hm = _IND_HEAD_RE.match(ln)
+        if hm:
+            out.append({
+                "file": f, "line": lineno, "name": hm.group(1),
+                "type": (hm.group(2) or "").strip(), "kind": "inductive",
+                "status": "definitional", "via": "inductive",
+            })
+            saw_type = True
+            if "≔" in ln:
+                out.extend(
+                    _ctors_in_segment(ln.split("≔", 1)[1], f, lineno)
+                )
+            continue
+        cm = _IND_CTOR_LINE_RE.match(ln)
+        if cm and saw_type:
+            out.append({
+                "file": f, "line": lineno, "name": cm.group(1),
+                "type": cm.group(2).strip(), "kind": "constructor",
+                "status": "definitional", "via": "constructor",
+            })
+    return out
+
+
+def _scan_theory(f: str) -> tuple[list[dict], list[dict], list[dict]]:
+    """Classify a single file's declarations.
+
+    Returns ``(symbols, rewrite_rules, admits)``."""
+    symbols: list[dict] = []
     rewrite_rules: list[dict] = []
     admits: list[dict] = []
     raw = _read(f)
     text = _strip_comments(raw)
     for start_line, stmt in _split_statements(text):
-        m = _RULE_STMT_RE.match(stmt)
-        if m:
-            for head, lhs, rhs in _parse_rewrite_rules(m.group(1)):
+        rm = _RULE_STMT_RE.match(stmt)
+        if rm:
+            for head, lhs, rhs in _parse_rewrite_rules(rm.group(1)):
                 rewrite_rules.append({
                     "file": f,
                     "line": start_line,
@@ -256,74 +398,77 @@ def _scan_assumptions(
                     "rhs": " ".join(rhs.split()),
                 })
             continue
-        if "≔" in stmt or ":=" in stmt:
-            continue  # has a definition body → not an assumption
         single = " ".join(stmt.split())
-        dm = _SYMBOL_DECL_RE.match(single)
-        if not dm:
+        rest = _MODIFIER_PREFIX_RE.sub("", single, count=1)
+        if rest.startswith("inductive "):
+            symbols.extend(_parse_inductive(stmt, start_line, f))
             continue
-        is_constant = bool(dm.group(1))
-        name = dm.group(2)
-        type_str = dm.group(3).strip()
-        assumptions.append({
-            "file": f,
-            "line": start_line,
-            "name": name,
-            "type": type_str,
-            "propositional": _is_propositional(type_str),
-            "constant": is_constant,
-        })
+        if rest.startswith("symbol "):
+            head, has_body = _split_body(rest)
+            nm = _SYM_NAME_RE.match(head)
+            if not nm:
+                continue
+            name = nm.group(1)
+            tail = nm.group(2)
+            ci = _find_top_level(tail, ":")
+            typ = tail[ci + 1:].strip() if ci >= 0 else ""
+            symbols.append(_symbol_entry(f, start_line, name, typ, has_body))
+            continue
     # Scan the comment-stripped text so a commented-out `admit` isn't
-    # counted. `_strip_comments` preserves newlines, so line numbers
-    # still align with the raw source.
+    # counted. `_strip_comments` preserves newlines, so line numbers align.
     for i, line in enumerate(_split_lines(text), 1):
         if _ADMIT_RE.search(line):
             admits.append({"file": f, "line": i})
-    return assumptions, rewrite_rules, admits
+    return symbols, rewrite_rules, admits
 
 
-_AXIOMS_SCOPES = ("file", "project", "all")
+_SIGNATURE_SCOPES = ("file", "project", "all")
 
 
-def tool_axioms(
+def tool_signature(
     client: LSPClient, files: list[str], scope: str = "project"
 ) -> dict:
-    """Scan [files] for unproved assumptions.
+    """Describe the theory presented by [files].
 
     ``scope`` controls how much is scanned:
 
     - ``"file"``: only the files passed in; ``require`` is not followed.
     - ``"project"`` (default): follow ``require`` transitively, but skip
       anything under the configured ``lib_root`` (the opam Stdlib tree).
-      This is usually what agents want — the project's own axioms, not
-      a re-dump of ``Set``/``Prop``/``eq_refl``/… every scan.
+      This is usually what agents want — the project's own theory, not a
+      re-dump of ``Set``/``Prop``/``eq_refl``/… every scan.
     - ``"all"``: full transitive scan, including Stdlib.
 
-    Four buckets come back:
+    Returns:
 
-    - **assumptions**: any ``symbol`` / ``constant symbol`` declared
-      without a ``≔`` body AND without any rewrite rule in scope keyed
-      on it (a pure postulate).
-    - **defined_by_rules**: data-typed (non-propositional) symbols that
-      *are* the head of at least one rewrite rule in scope — i.e.
-      recursive function definitions like ``+``, ``*``, ``!``. These
-      behave like assumptions to the kernel but aren't propositional
-      axioms; split out so the "no new axioms" contract is easy to
-      check.
+    - **symbols**: every declared symbol, each with ``name``, ``line``,
+      ``file``, ``type``, ``kind`` (``symbol`` / ``inductive`` /
+      ``constructor``), ``status`` (``definitional`` / ``axiomatic``),
+      and ``via`` — *why* it's classified so:
+
+      - ``body`` — has a ``≔`` definition (a def / theorem / opaque proof),
+      - ``rules`` — bodyless but reduced by rewrite rules (a function),
+      - ``inductive`` / ``constructor`` — part of an inductive definition,
+      - ``axiom`` — a bodyless propositional (``π …``) postulate,
+      - ``postulate`` — a bodyless non-propositional postulate.
+
+      Axioms are exactly the ``via == "axiom"`` entries; the whole
+      axiomatic base is ``status == "axiomatic"`` plus ``admits``.
+
     - **rewrite_rules**: every ``rule LHS ↪ RHS;`` (including each
-      sub-rule in a ``rule … with … with …;`` block).
-    - **admits**: every ``admit`` tactic inside a proof (a hole) —
-      trailing ``;`` optional; ``{ admit }`` inline forms are also
-      counted. Does not match the unrelated ``admitted`` end-of-proof
-      keyword.
+      sub-rule of a ``rule … with … with …;`` block).
+    - **admits**: every ``admit`` proof-hole (trailing ``;`` optional;
+      ``{ admit }`` inline forms counted; the ``admitted`` keyword is not).
+    - **scanned_files**: everything visited, in order.
+    - **unresolved_imports**: deduped ``{module, imported_by: [...]}``.
+    - **read_errors**: input files that couldn't be opened (when any).
 
-    Also returns ``scanned_files`` (everything visited) and
-    ``unresolved_imports`` (deduped: ``{module, imported_by: [...]}``).
+    Generated induction principles (``ind_<Type>``) are not listed.
     """
-    if scope not in _AXIOMS_SCOPES:
+    if scope not in _SIGNATURE_SCOPES:
         return {
             "ok": False,
-            "error": f"scope: expected one of {list(_AXIOMS_SCOPES)}, "
+            "error": f"scope: expected one of {list(_SIGNATURE_SCOPES)}, "
                      f"got {scope!r}",
         }
     if not isinstance(files, list) or any(
@@ -347,7 +492,7 @@ def tool_axioms(
 
     roots = _discover_pkg_roots(lib_root, map_dirs, anchor_files=anchors)
 
-    assumptions: list[dict] = []
+    symbols: list[dict] = []
     rewrite_rules: list[dict] = []
     admits: list[dict] = []
     read_errors: list[dict] = []
@@ -379,8 +524,8 @@ def tool_axioms(
             continue
         scanned.add(path)
         scan_order.append(path)
-        a, rr, ad = _scan_assumptions(path)
-        assumptions.extend(a)
+        syms, rr, ad = _scan_theory(path)
+        symbols.extend(syms)
         rewrite_rules.extend(rr)
         admits.extend(ad)
         # No recursion in file scope — each input file is scanned once,
@@ -399,23 +544,20 @@ def tool_axioms(
             if resolved_abs not in scanned:
                 frontier.append((resolved_abs, path))
 
-    rule_heads = {
-        rr["symbol"] for rr in rewrite_rules if rr.get("symbol")
-    }
-    defined_by_rules: list[dict] = []
-    pure_assumptions: list[dict] = []
-    for a in assumptions:
-        if a["name"] in rule_heads and not a.get("propositional"):
-            defined_by_rules.append(a)
-        else:
-            pure_assumptions.append(a)
+    # A bodyless, non-propositional symbol that heads a rewrite rule is a
+    # function definition, not a postulate — reclassify it as definitional.
+    # Propositional symbols stay axiomatic even if a rule is keyed on them.
+    rule_heads = {rr["symbol"] for rr in rewrite_rules if rr.get("symbol")}
+    for s in symbols:
+        if s["via"] == "postulate" and s["name"] in rule_heads:
+            s["status"] = "definitional"
+            s["via"] = "rules"
 
-    result = {
-        "files": files,
+    result: dict = {
+        "ok": True,
         "scope": scope,
         "scanned_files": scan_order,
-        "assumptions": pure_assumptions,
-        "defined_by_rules": defined_by_rules,
+        "symbols": symbols,
         "rewrite_rules": rewrite_rules,
         "admits": admits,
     }
